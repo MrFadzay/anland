@@ -24,6 +24,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar; // ===== 新增导入 =====
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -45,6 +46,10 @@ public class SettingsActivity extends Activity {
     private static final String KEY_CUSTOM_HEIGHT = "custom_height";
     private static final String DEFAULT_SOCKET_PATH = "/data/local/tmp/display_daemon.sock";
     private static final int UNBOUND = -1;
+
+    // ===== 新增：触摸板设置 Key =====
+    private static final String KEY_TOUCHPAD_MODE = "touchpad_mode";
+    private static final String KEY_MOUSE_SPEED = "mouse_speed";
 
     // Latency presets: label shown in the spinner -> target buffer in ms (0 = auto).
     private static final int[] LATENCY_MS = {0, 1, 3, 5, 10, 20};
@@ -194,6 +199,66 @@ public class SettingsActivity extends Activity {
         autoShowHint.setTextColor(Color.GRAY);
         autoShowHint.setPadding(0, dp(4), 0, dp(8));
         root.addView(autoShowHint);
+
+        // ===== 新增：触摸板设置区域 =====
+        TextView touchpadHeader = new TextView(this);
+        touchpadHeader.setText("Touchpad Settings");
+        touchpadHeader.setTextSize(16);
+        touchpadHeader.setTypeface(null, Typeface.BOLD);
+        touchpadHeader.setPadding(0, dp(32), 0, dp(8));
+        root.addView(touchpadHeader);
+
+        Switch touchpadModeSwitch = new Switch(this);
+        touchpadModeSwitch.setText("Touchpad Mode (relative movement)");
+        touchpadModeSwitch.setTextSize(14);
+        touchpadModeSwitch.setPadding(0, dp(8), 0, 0);
+        touchpadModeSwitch.setChecked(prefs.getBoolean(KEY_TOUCHPAD_MODE, true));
+        touchpadModeSwitch.setOnCheckedChangeListener((v, checked) ->
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putBoolean(KEY_TOUCHPAD_MODE, checked).apply());
+        root.addView(touchpadModeSwitch);
+
+        TextView touchpadHint = new TextView(this);
+        touchpadHint.setText("ON: finger slides move mouse cursor (relative). OFF: touch maps directly to screen (absolute).");
+        touchpadHint.setTextSize(12);
+        touchpadHint.setTextColor(Color.GRAY);
+        touchpadHint.setPadding(0, dp(4), 0, dp(12));
+        root.addView(touchpadHint);
+
+        LinearLayout speedLayout = new LinearLayout(this);
+        speedLayout.setOrientation(LinearLayout.VERTICAL);
+        speedLayout.setPadding(0, dp(8), 0, dp(16));
+
+        TextView speedLabel = new TextView(this);
+        speedLabel.setText("Mouse Speed");
+        speedLabel.setTextSize(14);
+        speedLayout.addView(speedLabel);
+
+        final TextView speedValue = new TextView(this);
+        speedValue.setTextSize(14);
+        speedValue.setTextColor(Color.BLUE);
+        speedLayout.addView(speedValue);
+
+        SeekBar speedSeek = new SeekBar(this);
+        speedSeek.setMax(90);
+        float curSpeed = prefs.getFloat(KEY_MOUSE_SPEED, 1.0f);
+        curSpeed = Math.max(0.5f, Math.min(5.0f, curSpeed));
+        speedSeek.setProgress((int)((curSpeed - 0.5f) / 0.05f));
+        speedValue.setText(String.format("%.1fx", curSpeed));
+        speedSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float val = 0.5f + progress * 0.05f;
+                speedValue.setText(String.format("%.1fx", val));
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putFloat(KEY_MOUSE_SPEED, val).apply();
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+        speedLayout.addView(speedSeek);
+        root.addView(speedLayout);
+        // ===== 新增结束 =====
 
         addConnectionSection(root);
 
