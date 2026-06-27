@@ -369,7 +369,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         setupFullscreen();
 
         // ===== 新增：重新读取触摸板设置 =====
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         isTouchpadMode = prefs.getBoolean(KEY_TOUCHPAD_MODE, true);
         mouseSpeed = prefs.getFloat(KEY_MOUSE_SPEED, 1.0f);
         mouseSpeed = Math.max(0.5f, Math.min(5.0f, mouseSpeed));
