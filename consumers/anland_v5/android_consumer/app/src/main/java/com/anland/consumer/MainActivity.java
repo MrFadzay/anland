@@ -59,6 +59,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     private static final String KEY_ACCESSIBILITY_ENABLED = "accessibility_key_intercept";
     private static final String KEY_EXTRA_KEYS_ENABLED = "extra_keys_bar";
     private static final String KEY_AUTO_SHOW_EXTRA_KEYS = "auto_show_extra_keys";
+    private static final String KEY_CUSTOM_WIDTH = "custom_width";
+    private static final String KEY_CUSTOM_HEIGHT = "custom_height";
     private EditText hiddenInput;
     private InputMethodManager imm;
     private int mImeBottom = 0;   // last IME bottom inset
@@ -195,10 +197,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         String helperPath = getApplicationInfo().nativeLibraryDir + "/libfdhelper.so";
         String bridgePath = getCacheDir().getAbsolutePath() + "/anland_fdbridge.sock";
         nativeConfigure(sock.trim(), useRoot, helperPath, bridgePath);
-        int customW = prefs.getInt("custom_width", 0);
-        int customH = prefs.getInt("custom_height", 0);
-        customScreenWidth = prefs.getInt("custom_width", 0);
-        customScreenHeight = prefs.getInt("custom_height", 0);
+        int customW = prefs.getInt(KEY_CUSTOM_WIDTH, 0);
+        int customH = prefs.getInt(KEY_CUSTOM_HEIGHT, 0);
+        customScreenWidth = prefs.getInt(KEY_CUSTOM_WIDTH, 0);
+        customScreenHeight = prefs.getInt(KEY_CUSTOM_HEIGHT, 0);
         nativeSetCustomResolution(customW, customH);
     }
     
@@ -285,8 +287,22 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         KeyInterceptor.recheck();
 
         // Sync extra-keys bar visibility with the settings switch.
-        setExtraKeysBarVisible(getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getBoolean(KEY_EXTRA_KEYS_ENABLED, false));
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean extraKeysEnabled = prefs.getBoolean(KEY_EXTRA_KEYS_ENABLED, false);
+        boolean autoShow = prefs.getBoolean(KEY_AUTO_SHOW_EXTRA_KEYS, true);
+        
+        if (extraKeysEnabled) {
+            if (autoShow) {
+                // If auto-show is enabled, show the panel only if the keyboard is visible.
+                setExtraKeysBarVisible(isImeVisible());
+            } else {
+                // If auto-show is disabled, the panel is always shown.
+                setExtraKeysBarVisible(true);
+            }
+        } else {
+            // If the panel is disabled in the settings, hide it.
+            setExtraKeysBarVisible(false);
+        }
 
         setupFullscreen();
         DisplayManager dm = getSystemService(DisplayManager.class);
@@ -602,7 +618,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         if (prefs.getBoolean(KEY_EXTRA_KEYS_ENABLED, false)
-                && prefs.getBoolean("auto_show_extra_keys", true)) {
+                && prefs.getBoolean(KEY_AUTO_SHOW_EXTRA_KEYS, true)) {
             if (imeVisible && !wasImeVisible) {
                 setExtraKeysBarVisible(true);
             } else if (!imeVisible && wasImeVisible) {
@@ -685,11 +701,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public boolean onGenericMotionEvent(MotionEvent event) {
         if (isMouseEvent(event)) {
+            float scaleX = (customScreenWidth > 0 && viewWidth > 0) ? (float)customScreenWidth / viewWidth : 1.0f;
+            float scaleY = (customScreenHeight > 0 && viewHeight > 0) ? (float)customScreenHeight / viewHeight : 1.0f;
+            
             int action = event.getActionMasked();
             if (action == MotionEvent.ACTION_HOVER_MOVE) {
-                nativeSendMouseMotion(event.getX(), event.getY(),
-                                      event.getAxisValue(MotionEvent.AXIS_RELATIVE_X),
-                                      event.getAxisValue(MotionEvent.AXIS_RELATIVE_Y));
+                nativeSendMouseMotion(event.getX() * scaleX, event.getY() * scaleY,
+                                      event.getAxisValue(MotionEvent.AXIS_RELATIVE_X) * scaleX,
+                                      event.getAxisValue(MotionEvent.AXIS_RELATIVE_Y) * scaleY);
                 return true;
             }
             if (action == MotionEvent.ACTION_SCROLL) {
@@ -807,14 +826,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     }
 
     private boolean handleMouseEvent(MotionEvent event) {
+        float scaleX = (customScreenWidth > 0 && viewWidth > 0) ? (float)customScreenWidth / viewWidth : 1.0f;
+        float scaleY = (customScreenHeight > 0 && viewHeight > 0) ? (float)customScreenHeight / viewHeight : 1.0f;
+        
         float dx = 0f;
         float dy = 0f;
         if (event.getHistorySize() > 0) {
             int last = event.getHistorySize() - 1;
-            dx = event.getX() - event.getHistoricalX(0, last);
-            dy = event.getY() - event.getHistoricalY(0, last);
+            dx = (event.getX() - event.getHistoricalX(0, last)) * scaleX;
+            dy = (event.getY() - event.getHistoricalY(0, last)) * scaleY;
         }
-        nativeSendMouseMotion(event.getX(), event.getY(), dx, dy);
+        nativeSendMouseMotion(event.getX() * scaleX, event.getY() * scaleY, dx, dy);
 
         int currentBS = event.getButtonState();
         for (int[] btn : BUTTON_MAP) {
@@ -844,7 +866,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     int pointerIdx = event.getActionIndex();
     int pointerId = event.getPointerId(pointerIdx);
     
-    // Масштабирование
+    // Scaling
     float scaleX = (customScreenWidth > 0 && viewWidth > 0) ? 
                    (float)customScreenWidth / viewWidth : 1.0f;
     float scaleY = (customScreenHeight > 0 && viewHeight > 0) ? 

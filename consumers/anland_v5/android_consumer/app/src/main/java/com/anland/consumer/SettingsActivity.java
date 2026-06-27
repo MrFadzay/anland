@@ -37,6 +37,8 @@ public class SettingsActivity extends Activity {
     private static final String KEY_ACCESSIBILITY_ENABLED = "accessibility_key_intercept";
     private static final String KEY_EXTRA_KEYS_ENABLED = "extra_keys_bar";
     private static final String KEY_AUTO_SHOW_EXTRA_KEYS = "auto_show_extra_keys";
+    private static final String KEY_CUSTOM_WIDTH = "custom_width";
+    private static final String KEY_CUSTOM_HEIGHT = "custom_height";
     private static final String DEFAULT_SOCKET_PATH = "/data/local/tmp/display_daemon.sock";
     private static final int UNBOUND = -1;
 
@@ -304,14 +306,14 @@ public class SettingsActivity extends Activity {
     widthInput.setSingleLine(true);
     widthInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
     widthInput.setHint("Width (e.g. 1920)");
-    widthInput.setText(String.valueOf(prefs.getInt("custom_width", 0)));
+    widthInput.setText(String.valueOf(prefs.getInt(KEY_CUSTOM_WIDTH, 0)));
     widthInput.addTextChangedListener(new TextWatcher() {
         public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
         public void onTextChanged(CharSequence s, int a, int b, int c) {}
         public void afterTextChanged(Editable s) {
             try {
                 int w = Integer.parseInt(s.toString().trim());
-                prefs.edit().putInt("custom_width", w).apply();
+                prefs.edit().putInt(KEY_CUSTOM_WIDTH, w).apply();
             } catch (NumberFormatException e) {}
         }
     });
@@ -322,14 +324,14 @@ public class SettingsActivity extends Activity {
     heightInput.setSingleLine(true);
     heightInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
     heightInput.setHint("Height (e.g. 1080)");
-    heightInput.setText(String.valueOf(prefs.getInt("custom_height", 0)));
+    heightInput.setText(String.valueOf(prefs.getInt(KEY_CUSTOM_HEIGHT, 0)));
     heightInput.addTextChangedListener(new TextWatcher() {
         public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
         public void onTextChanged(CharSequence s, int a, int b, int c) {}
         public void afterTextChanged(Editable s) {
             try {
                 int h = Integer.parseInt(s.toString().trim());
-                prefs.edit().putInt("custom_height", h).apply();
+                prefs.edit().putInt(KEY_CUSTOM_HEIGHT, h).apply();
             } catch (NumberFormatException e) {}
         }
     });
